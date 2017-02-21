@@ -41,7 +41,6 @@ write.table(df_enz, stdout())
 genome <- readDNAStringSet(genome_file, "fasta")
 
 genome
-names(genome)
 
 # Identify the MspI recongnition sites for each chromosomal entry
 # Generate a dataframe with the length of MspI digested fragments
@@ -49,11 +48,9 @@ mdf=data.frame();
 
 f_enz <- function(enz){
   write(paste("\t", enz["name"], "\t", enz["target"]), stdout())
-  count <- vcountPattern(enz["target"], genome)
-  count
-  write(count, stdout())
-  match <- vmatchPattern(enz["target"], genome)
-  match
+  #count <- vcountPattern(enz["target"], genome)
+  #write(count, stdout())
+  match <- vmatchPattern(enz["target"], genome, fix=FALSE)
   write.table(match, stdout())
 }
 
