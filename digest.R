@@ -40,7 +40,7 @@ write(paste("\t", names(genome), "of length:", width(genome)), stderr())
 # the explicit loop (apply function)
 f_enz <- function(enz){
   
-  match <- vmatchPattern(enz["target"], genome, fix=FALSE)
+  match <- vmatchPattern(enz["target"], genome, fixed="subject")
   ranges <- unlist(match)
   
   write(paste("\t", enz["name"], " - ", enz["target"], " --> Matches found: ", length(ranges), sep = ""), file = stderr())
