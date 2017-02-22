@@ -1,1 +1,37 @@
-./digest.R enzymes.all.tab test.fna.gz
+### digest
+###
+
+digest.R enzymes.all.tab test.fna.gz > test.bed 2> test.err
+
+# test.bed: digest target sites
+# test.err: digest.R report (including number of matches found)
+
+### generate digestion sites barplot
+###
+
+digest_barplot.R test.bed test.pdf > test.counts
+
+# test.pdf: barplot
+# test.counts: numeric table used to make the barplot
+
+### Obtain fragments
+###
+
+digest2fragments.py test.bed > test.fragments.bed 2> test.fragments.err
+
+### Fragments stats
+###
+
+fragments_barplot.R test.fragments.bed test.fragments.barplot.pdf > test.fragments.barplot.tab
+
+fragments_len_dist.R test.fragments.bed test.fragments.len_dist.pdf > test.fragments.len_dist.tab
+
+## Size selection
+
+fragment_size_selection.R test.fragments.bed 30 200 > test.fragments.30_200.bed
+
+## Fragment type selection
+
+fragment_type_selection.R test.fragments.bed test.fragments.selection > test.fragments.type_sel.bed
+
+##
