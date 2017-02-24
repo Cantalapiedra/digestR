@@ -31,7 +31,7 @@ write(paste("\nParsing fasta input file:", genome_file), stderr())
 genome <- readDNAStringSet(genome_file, "fasta")
 
 write(paste("Num. sequences read:", length(genome)), stderr())
-write(paste("\t", names(genome), "of length:", width(genome)), stderr())
+#write(paste("\t", names(genome), "of length:", width(genome)), stderr())
 
 # Function to find matches for each enzyme
 # In theory, this could be done with matchPDict also avoiding

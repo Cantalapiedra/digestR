@@ -20,7 +20,7 @@ if (length(args)==2) {
 df_frag_types <- fread(frag_types_file, header=FALSE, verbose=FALSE, showProgress=FALSE, sep="\t")
 
 frag_types <- unlist(df_frag_types[,"V1"])
-frag_types
+write.table(frag_types, stderr())
 
 # Read bed file
 

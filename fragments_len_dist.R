@@ -8,9 +8,11 @@ library(data.table)
 
 args = commandArgs(trailingOnly=TRUE)
 
-if (length(args)==2) {
+if (length(args)==4) {
   frag_file = args[1] # bed file
   out_file = args[2]
+  max_plot = strtoi(args[3])
+  argbreaks = strtoi(args[4])
 } else {
   stop("At least one argument must be supplied (input file).n", call.=FALSE)
 }
@@ -37,39 +39,44 @@ if (nrow(df_bed)>1000000){
 
 frag_types <- unique(df_bed$"fragtype")
 write("Fragment types:", stderr())
-frag_types
+write.table(frag_types, stderr())
 
 ### Now calculate length distributions
 
 write("Calculating lengths...", stderr())
 mat_lengths <- cbind(df_bed, len=(df_bed$end - df_bed$start + 1))
-head(mat_lengths)
+write.table(head(mat_lengths), stderr())
+
+# Filtering by maximum size
+#max_len=5000
+#mat_lengths <- mat_lengths[mat_lengths$len<=max_len,]
+#write(paste("Rows <", max_len, ":", nrow(mat_lengths)), stderr())
 
 # Create histograms
 
 write("Creating histograms...", stderr())
 
-create_hist <- function(frag_type, mat_lengths){
+create_hist <- function(frag_type, mat_lengths, max_plot, argbreaks){
   write(paste("Next fragment type: ", frag_type), stderr())
   
   frag_type_data = mat_lengths[mat_lengths$fragtype==frag_type,]
   lens = unlist(frag_type_data[,"len"])
-  h = hist(lens, plot=FALSE, breaks=400)
+  h = hist(lens, plot=FALSE, breaks=argbreaks)
   h$density = h$counts/sum(h$counts)*100
-  plot(h, freq=FALSE, main=frag_type, xlim=c(0, 2000), xlab="fragment size", ylab="percentage")
+  plot(h, freq=FALSE, main=frag_type, xlim=c(0, max_plot), xlab="fragment size", ylab="percentage")
 }
 
 pdf(out_file)
 
 # histograms
 #frag_types <- frag_types[frag_types %in% "EcoRI:EcoRI"]
-dummy <- lapply(frag_types, create_hist, mat_lengths)
+dummy <- lapply(frag_types, create_hist, mat_lengths, max_plot, argbreaks)
 
 # boxplot
 write("Creating boxplot...", stderr())
 
 #mat_lengths <- mat_lengths[mat_lengths$fragtype %in% c("MseI:EcoRI", "EcoRI:EcoRI"),] 
-boxplot(len~fragtype, data=mat_lengths, ylim=c(0, 2000))
+boxplot(len~fragtype, data=mat_lengths, ylim=c(0, max_plot))
 
 invisible(dev.off())
 
