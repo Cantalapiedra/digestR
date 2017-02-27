@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## digest.p.R
+## digestR
 ## 2017 CPCantalapiedra
 ## based on https://www.r-bloggers.com/restriction-digestion-of-eukaryotic-genomes-in-r/
 
@@ -36,7 +36,7 @@ write.table(df_enz, file = stderr(), row.names = FALSE, quote = FALSE, sep = "\t
 write(paste("\nParsing fasta input file:", genome_file), stderr())
 genome <- readDNAStringSet(genome_file, "fasta")
 
-write(paste("Num. sequences read:", length(genome)), stderr())
+#write(paste("\t", names(genome), "of length:", width(genome)), stderr())
 
 # Function to find matches for each enzyme
 # In theory, this could be done with matchPDict also avoiding
@@ -67,37 +67,94 @@ f_enz <- function(enz, subject, seq_name){
   return(ranges)
 }
 
-
+#### Main loop: for each enzyme, look for targets
+#write("\nstart cutting...", stderr())
+#all.ranges <- do.call(rbind, apply(df_enz, 1, f_enz, genome))
 
 f_seq <- function(i, seq_names){
   seq <- genome[[i]]
   seq_name <- seq_names[[i]]
   #write(paste("Genome index:", i), stderr())
   
-  #### Main loop: for each enzyme, look for targets  
   ranges <- apply(df_enz, 1, f_enz, seq, seq_name)
+  ranges <- do.call(rbind, ranges)
+  return(ranges)
+  #return()
+}
+
+
+write("Check sequences in genome...", stderr())
+num_seqs <- length(genome)
+write(paste("Num. sequences read:", num_seqs), stderr())
+
+write(paste("Num. cores to balance tasks:", cores), stderr())
+
+seqs_per_core = ceiling(num_seqs / cores)
+
+write(paste("Num. sequences per core: ", seqs_per_core), stderr())
+      
+f_balance <- function(num_set, num_seqs, seqs_per_core, genome){
+  #write(paste("Num set:", num_set), stderr())
+  ini = 1+seqs_per_core*(num_set-1)
+  end = ini+(seqs_per_core-1)
+  if (end>num_seqs) end = num_seqs
+  if (ini>num_seqs) return(NULL)
+  
+  #write(paste("Ini:", ini, "End:", end), stderr())
+  return(genome[ini:end])
+}
+
+write("Balancing tasks...", stderr())
+genome_list <- lapply(1:cores, f_balance, num_seqs, seqs_per_core, genome)
+genome_list <- Filter(Negate(is.null), genome_list)
+#genome_list
+
+cores <- length(genome_list)
+write(paste("Cores which will be used after balancing: ", cores), stderr())
+
+# Function to find matches for each enzyme
+# In theory, this could be done with matchPDict also avoiding
+# the explicit loop (apply function)
+f_enz <- function(enz, genome){
+  
+  # search the RE pattern in the input sequence
+  # fixed="subject" to avoid Ns while allowing UIPAC codes in enzyme target
+  match <- vmatchPattern(enz["target"], genome, fixed="subject")
+  ranges <- unlist(match)
+  
+  write(paste("\t", enz["name"], " - ", enz["target"], " --> Matches found: ", length(ranges), sep = ""), file = stderr())
+  
+  # If there are hits, add the enzyme name and reorder columns
+  if (length(ranges)>0) {
+    ranges <- as.data.frame(ranges)
+    ranges <- cbind(ranges, enzyme=enz["name"], row.names = NULL)
+    ranges <- ranges[,c("names", "start", "end", "enzyme")]
+    #write.table(ranges, stderr())
+  } else { # when there are not hits just create an empty record
+    ranges <- as.data.frame(ranges)
+    ranges <- cbind(ranges, enzyme=numeric(0), row.names = NULL)
+    ranges <- ranges[,c("names", "start", "end", "enzyme")]
+  }
+  
+  return(ranges)
+}
+
+f_seq <- function(genome){
+  #### Main loop: for each enzyme, look for targets  
+  ranges <- apply(df_enz, 1, f_enz, genome)
   ranges <- do.call(rbind, ranges)
   return(ranges)
 }
 
-write("Check sequences in genome...", stderr())
-num_seqs <- length(genome)
-seq_names = names(genome)
-
 # Create cluster for parallel
 
 write("Creating cluster...", stderr())
+#cl <- makeCluster(cores, type="FORK", outfile = "debug.txt")
 cl <- makeForkCluster(cores, outfile = "debug.txt")
-#cl
-#is.null(cl)
 
-#write("Cluster export...", stderr())
-#clusterExport(cl, "df_enz")
-#clusterExport(cl, "f_enz")
-#clusterExport(cl, "genome")
-
-write("\nLoop over genome...", stderr())
-loop_ranges <- parLapply(cl, 1:num_seqs, f_seq, seq_names)
+write("\nLoop over genome list...", stderr())
+loop_ranges <- parLapply(cl, genome_list, f_seq)
+write("\nMerge results...", stderr())
 all.ranges <- do.call(rbind, loop_ranges)
 
 write("Releasing cluster...", stderr())
@@ -114,5 +171,26 @@ write("writing results...", stderr())
 write.table(all.ranges, file = stdout(), row.names=FALSE, quote=FALSE, sep="\t")
 
 write("finished.", stderr())
+
+q()
+
+seq_names = names(genome)
+
+
+#cl
+#is.null(cl)
+
+#write("Cluster export...", stderr())
+#clusterExport(cl, "df_enz")
+#clusterExport(cl, "f_enz")
+#clusterExport(cl, "genome")
+
+
+
+
+
+#q()
+
+
 
 ## END

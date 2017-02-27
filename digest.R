@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-## digestR
+## digest.R
 ## 2017 CPCantalapiedra
 ## based on https://www.r-bloggers.com/restriction-digestion-of-eukaryotic-genomes-in-r/
 
